@@ -1,0 +1,479 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Историческая временная шкала: День детских общественных организаций в России</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- TimelineJS CDN -->
+    <link title="timeline-styles" rel="stylesheet" href="https://cdn.knightlab.com/libs/timeline3/latest/css/timeline.css">
+    <script src="https://cdn.knightlab.com/libs/timeline3/latest/js/timeline.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f4f7fa;
+        }
+        #timeline-embed {
+            width: 100%;
+            height: 600px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        /* Header */
+        .header {
+            background: linear-gradient(90deg, #003087 0%, #d81e05 100%);
+            padding: 3rem 1.5rem;
+            text-align: center;
+            color: white;
+            width: 100%;
+            animation: fadeIn 1s ease-out;
+        }
+        /* Footer */
+        .footer {
+            background: linear-gradient(90deg, #003087 0%, #d81e05 100%);
+            color: white;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            width: 100%;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+            animation: fadeInUp 1s ease-out;
+        }
+        /* Buttons */
+        .details-button {
+            background: #d81e05;
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+            display: inline-block;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .details-button:hover {
+            background: #b51704;
+            transform: scale(1.05);
+        }
+        .telegram-button {
+            background: linear-gradient(90deg, #0088cc, #00aaff);
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 6px;
+            display: inline-block;
+            text-decoration: none;
+            margin-top: 0.75rem;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .telegram-button:hover {
+            background: linear-gradient(90deg, #006699, #0088cc);
+            transform: scale(1.05);
+        }
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+        }
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #333;
+            transition: color 0.2s;
+        }
+        .modal-close:hover {
+            color: #d81e05;
+        }
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Mobile Adjustments */
+        @media (max-width: 640px) {
+            .header {
+                padding: 1.5rem 1rem;
+            }
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            .header p {
+                font-size: 0.875rem;
+                margin-top: 0.5rem;
+            }
+            #timeline-embed {
+                height: 450px;
+            }
+            .container {
+                padding: 1rem;
+            }
+            .details-button {
+                padding: 0.4rem 1rem;
+                font-size: 0.875rem;
+            }
+            .modal-content {
+                padding: 1rem;
+                max-width: 95%;
+                width: 95%;
+            }
+            .modal-content h2 {
+                font-size: 1.25rem;
+            }
+            .modal-content p {
+                font-size: 0.875rem;
+            }
+            .modal-close {
+                font-size: 1.25rem;
+                top: 0.5rem;
+                right: 0.5rem;
+            }
+            .footer {
+                padding: 1rem;
+            }
+            .footer p {
+                font-size: 0.875rem;
+            }
+            .telegram-button {
+                padding: 0.4rem 1rem;
+                font-size: 0.875rem;
+                margin-top: 0.5rem;
+            }
+            /* Adjust TimelineJS card styles for mobile */
+            .tl-timeline .tl-slide-content-container .tl-text-content-container .tl-text {
+                font-size: 0.875rem;
+            }
+            .tl-timeline .tl-slide-content-container .tl-text-content-container .tl-headline {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header w-full">
+        <h1 class="text-4xl font-bold md:text-5xl">День детских общественных организаций в России</h1>
+        <p class="text-xl mt-3 md:text-2xl">От скаутского движения к Движению Первых: историческая временная шкала</p>
+    </div>
+
+    <div class="container mx-auto p-6 md:p-8">
+        <div id="timeline-embed"></div>
+    </div>
+
+    <!-- Modal Structure -->
+    <div id="details-modal" class="modal">
+        <div class="modal-content">
+            <span id="modal-close" class="modal-close">×</span>
+            <h2 id="modal-title" class="text-2xl font-bold mb-4 md:text-3xl"></h2>
+            <p id="modal-text" class="text-gray-700 leading-relaxed"></p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p class="text-lg">2025, Первичное отделение Движения Первых МБОУ "Сийская СШ № 116"</p>
+        <a href="https://t.me/DvizheniePervyh" class="telegram-button" target="_blank">Телеграм-канал</a>
+    </div>
+
+    <script>
+        // Detailed information for each event
+        const detailedInfo = {
+            "Скаутское движение в мире": {
+                title: "Скаутское движение в мире",
+                text: "Скаутское движение, основанное Робертом Баден-Пауэллом в 1907 году, началось с лагеря на острове Браунси, где 20 мальчиков обучались навыкам выживания, лидерства и моральной ответственности. Книга 'Scouting for Boys' (1908) стала мировым бестселлером, вдохновив создание скаутских организаций в десятках стран. К 1920 году движение охватило миллионы участников, включая девушек (гайды). Скаутинг акцентировал физическое развитие, патриотизм и служение обществу, адаптируясь к местным культурам. Сегодня Всемирная организация скаутского движения (WOSM) объединяет около 50 млн участников в 170 странах."
+            },
+            "Скауты в России": {
+                title: "Скауты в России",
+                text: "Скаутское движение в России началось в 1909 году с патруля 'Бобры' под руководством Олега Пантюхова. К 1917 году оно охватило 50 тыс. участников в 143 городах, включая Москву и Петербург. Скауты обучались навыкам выживания, картографии и оказания первой помощи, а также участвовали в общественных работах. После Октябрьской революции в 1922 году скаутские организации были запрещены как 'буржуазные', а их элементы интегрированы в пионерию. Возрождение скаутинга началось в 1990-х годах, но оно остаётся менее масштабным."
+            },
+            "Октябрята": {
+                title: "Октябрята",
+                text: "Октябрята, созданные в 1924 году, были первой ступенью советской молодёжной системы для детей 7–9 лет. Название связано с Октябрьской революцией. Дети объединялись в 'звёздочки' по 5–8 человек, носили значки с юным Лениным и участвовали в школьных мероприятиях, таких как сбор макулатуры и патриотические утренники. Октябрята готовились к вступлению в пионеры, изучая основы дисциплины и коллективизма. Организация существовала до 1991 года, охватывая миллионы школьников."
+            },
+            "Пионерская организация": {
+                title: "Пионерская организация",
+                text: "Всесоюзная пионерская организация им. В. И. Ленина, основанная 19 мая 1922 года, была массовой организацией для детей 9–14 лет. Она заимствовала элементы скаутинга, но фокусировалась на коммунистическом воспитании. Пионеры носили красные галстуки, участвовали в лагерях (например, 'Артек'), сборе металлолома и субботниках. К 1970 году в организации состояло 23 млн детей. Пионерия имела строгую структуру: отряды, дружины, советы. Распущена в 1990 году с распадом СССР."
+            },
+            "Комсомол": {
+                title: "Комсомол",
+                text: "Российский коммунистический союз молодёжи (РКСМ), переименованный в ВЛКСМ в 1926 году, создан в 1918 году для молодёжи 14–28 лет. Комсомол руководил пионерами и октябрятами, организовывал трудовые проекты (стройки БАМа, целинные земли) и патриотические акции. К 1980-м годам насчитывал 40 млн членов. Он был политической школой для КПСС, но терял популярность в перестройку. Распущен в 1991 году, оставив наследие в виде молодёжных движений."
+            },
+            "Российское движение школьников": {
+                title: "Российское движение школьников",
+                text: "Российское движение школьников (РДШ), основанное в 2015 году указом президента, объединяло школьников с 8 лет для развития лидерства, творчества и патриотизма. РДШ включало программы вроде 'Орлята России' и конкурсы, такие как 'Большая перемена'. К 2022 году в нём участвовало около 2 млн детей. В 2022 году РДШ было реорганизовано в Движение Первых, став его основой, но сохранив некоторые проекты под новым брендом."
+            },
+            "Юнармия": {
+                title: "Юнармия",
+                text: "Всероссийское военно-патриотическое движение 'Юнармия', созданное в 2016 году при поддержке Минобороны, воспитывает молодёжь в духе патриотизма и готовности к военной службе. Юнармейцы (с 8 лет) участвуют в парадах, сборах, квесты и волонтёрских акциях. К 2023 году движение насчитывало около 1,5 млн участников. Юнармия сотрудничает с Движением Первых, но сохраняет отдельную регистрацию и военный акцент."
+            },
+            "Орлята России": {
+                title: "Орлята России",
+                text: "Программа 'Орлята России', запущенная в 2016 году в рамках РДШ, ориентирована на младших школьников (7–11 лет). Она включает треки, такие как 'Орлёнок-Доброволец', 'Орлёнок-Эрудит', 'Орлёнок-Спортсмен', развивающие творчество, знания и патриотизм. Программа действует в школах, вовлекая детей в проекты и конкурсы. После 2022 года 'Орлята' интегрированы в Движение Первых, но сохраняют свою идентичность."
+            },
+            "Движение Первых": {
+                title: "Движение Первых",
+                text: "Российское движение детей и молодёжи 'Движение Первых', созданное 20 июля 2022 года, объединяет детей с 6 лет для воспитания на основе 'традиционных российских ценностей'. Оно наследует РДШ и пионерию, предлагая проекты в образовании, спорте и волонтёрстве. К 2023 году в движении участвовало около 5 млн детей, с бюджетом 19 млрд рублей. В 2024 году движение попало под санкции США за участие в депортации украинских детей, что вызвало споры."
+            },
+            "Конец пионерии": {
+                title: "Конец пионерии",
+                text: "В 1990 году Всесоюзная пионерская организация была распущена из-за распада СССР и утраты идеологической базы. День пионерии, отмечавшийся 19 мая, был переосмыслен как День детских общественных организаций. Этот праздник теперь посвящён современным движениям, таким как Движение Первых, Юнармия и 'Орлята России', подчёркивая преемственность традиций воспитания молодёжи."
+            }
+        };
+
+        // TimelineJS configuration
+        const timelineData = {
+            "title": {
+                "text": {
+                    "headline": "История детских организаций в России",
+                    "text": "От скаутского движения до Движения Первых: эволюция детских общественных организаций в России"
+                }
+            },
+            "events": [
+                {
+                    "media": {
+                        "url": "pic/photo1.jpg"
+                    },
+                    "start_date": {
+                        "year": "1907"
+                    },
+                    "text": {
+                        "headline": "Скаутское движение в мире",
+                        "text": "Скаутское движение основано Робертом Баден-Пауэллом в Великобритании. Его книга 'Scouting for Boys' вдохновила создание молодёжных организаций по всему миру, направленных на воспитание физически и морально сильных граждан. Движение быстро распространилось, включая Россию.<br><span class='details-button' data-headline='Скаутское движение в мире'>Подробнее</span>"
+                    }
+                },
+                {
+                    "media": {
+                        "url": "pic/photo2.png"
+                    },
+                    "start_date": {
+                        "year": "1909"
+                    },
+                    "text": {
+                        "headline": "Скауты в России",
+                        "text": "Первый скаутский патруль 'Бобры' организован Олегом Пантюховым в Царском Селе. К 1917 году в России насчитывалось около 50 тыс. скаутов в 143 городах. Движение воспитывало патриотизм и навыки выживания, но было запрещено в 1922 году после Октябрьской революции.<br><span class='details-button' data-headline='Скауты в России'>Подробнее</span>"
+                    }
+                },
+                {
+                    "media": {
+                        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Oktyabryata_badge.jpg/200px-Oktyabryata_badge.jpg"
+                    },
+                    "start_date": {
+                        "year": "1924"
+                    },
+                    "text": {
+                        "headline": "Октябрята",
+                        "text": "Октябрята — организация для детей 7–9 лет, готовившая к вступлению в пионеры. Дети носили значок с изображением юного Ленина. Организованные в 'звёздочки' по 5–8 человек, октябрята участвовали в школьных мероприятиях под руководством пионеров и комсомольцев.<br><span class='details-button' data-headline='Октябрята'>Подробнее</span>"
+                    }
+                },
+                {
+                    "media": {
+                        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Pioneer_flag_SSSR.svg/320px-Pioneer_flag_SSSR.svg.png"
+                    },
+                    "start_date": {
+                        "year": "1922"
+                    },
+                    "text": {
+                        "headline": "Пионерская организация",
+                        "text": "Всесоюзная пионерская организация им. В. И. Ленина создана 19 мая 1922 года. Заимствуя элементы скаутинга, она воспитывала детей 9–14 лет в духе коммунизма. К 1970 году объединяла 23 млн пионеров. Распущена в 1990 году.<br><span class='details-button' data-headline='Пионерская организация'>Подробнее</span>"
+                    }
+                },
+                {
+                    "media": {
+                        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Komsomol_badge.jpg/200px-Komsomol_badge.jpg"
+                    },
+                    "start_date": {
+                        "year": "1918"
+                    },
+                    "text": {
+                        "headline": "Комсомол",
+                        "text": "Российский коммунистический союз молодёжи (РКСМ), позже ВЛКСМ, создан для молодёжи 14–28 лет. Комсомол руководил пионерами и октябрятами, организовывал трудовые и патриотические акции. Распущен в 1991 году.<br><span class='details-button' data-headline='Комсомол'>Подробнее</span>"
+                    }
+                },
+                {
+                    "media": {
+                        "url": "https://rdsh.education/upload/medialibrary/7ed/7ed9b4e2c0e0e0e0e0e0e0e0e0e0e0e0.png"
+                    },
+                    "start_date": {
+                        "year": "2015"
+                    },
+                    "text": {
+                        "headline": "Российское движение школьников",
+                        "text": "РДШ создано в 2015 году для воспитания школьников с 8 лет. Организация поддерживала проекты в области образования и патриотизма. В 2022 году реорганизовано в Движение Первых.<br><span class='details-button' data-headline='Российское движение школьников'>Подробнее</span>"
+                    }
+                },
+                {
+                    "media": {
+                        "url": "https://yunarmy.ru/images/logo.png"
+                    },
+                    "start_date": {
+                        "year": "2016"
+                    },
+                    "text": {
+                        "headline": "Юнармия",
+                        "text": "Всероссийское военно-патриотическое движение 'Юнармия' основано в 2016 году. Оно воспитывает молодёжь в духе патриотизма и готовности к службе. Юнармейцы участвуют в мероприятиях с Движением Первых, но регистрируются отдельно.<br><span class='details-button' data-headline='Юнармия'>Подробнее</span>"
+                    }
+                },
+                {
+                    "media": {
+                        "url": "https://orlyatarossii.ru/images/logo.png"
+                    },
+                    "start_date": {
+                        "year": "2016"
+                    },
+                    "text": {
+                        "headline": "Орлята России",
+                        "text": "Программа для младших школьников, входящая в РДШ. 'Орлята России' развивают творчество и патриотизм через треки, такие как 'Орлёнок-Доброволец' и 'Орлёнок-Эрудит'. Действует в школах по всей России.<br><span class='details-button' data-headline='Орлята России'>Подробнее</span>"
+                    }
+                },
+                {
+                    "media": {
+                        "url": "https://xn--90aofbcjip.xn--p1ai/images/logo.png"
+                    },
+                    "start_date": {
+                        "year": "2022"
+                    },
+                    "text": {
+                        "headline": "Движение Первых",
+                        "text": "Российское движение детей и молодёжи 'Движение Первых' создано 20 июля 2022 года. Оно объединяет детей с 6 лет для воспитания на основе традиционных ценностей. Сравнивается с пионерией, имеет бюджет 19 млрд рублей. В 2024 году попало под санкции США.<br><span class='details-button' data-headline='Движение Первых'>Подробнее</span>"
+                    }
+                },
+                {
+                    "media": {
+                        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Pioneer_flag_SSSR.svg/320px-Pioneer_flag_SSSR.svg.png"
+                    },
+                    "start_date": {
+                        "year": "1990"
+                    },
+                    "text": {
+                        "headline": "Конец пионерии",
+                        "text": "В 1990 году Всесоюзная пионерская организация распущена, а День пионерии заменён на День детских общественных организаций, отмечаемый 19 мая. Праздник чествует современные детские движения.<br><span class='details-button' data-headline='Конец пионерии'>Подробнее</span>"
+                    }
+                }
+            ]
+        };
+
+        // Initialize TimelineJS
+        window.timeline = new TL.Timeline('timeline-embed', timelineData, {
+            language: 'ru',
+            height: 600
+        });
+
+        // Modal functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('details-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalText = document.getElementById('modal-text');
+            const closeModal = document.getElementById('modal-close');
+
+            // Function to open modal
+            function openModal(headline) {
+                const info = detailedInfo[headline];
+                if (info) {
+                    modalTitle.textContent = info.title;
+                    modalText.textContent = info.text;
+                    modal.style.display = 'flex';
+                }
+            }
+
+            // Function to close modal
+            function closeModalFunc() {
+                modal.style.display = 'none';
+            }
+
+            // Add click event listeners to details buttons
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('details-button')) {
+                    const headline = e.target.getAttribute('data-headline');
+                    openModal(headline);
+                }
+            });
+
+            // Close modal on close button click
+            closeModal.addEventListener('click', closeModalFunc);
+
+            // Close modal on outside click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModalFunc();
+                }
+            });
+
+            // Close modal on Escape key press
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.style.display === 'flex') {
+                    closeModalFunc();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
